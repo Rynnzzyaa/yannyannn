@@ -90,8 +90,8 @@ curl_setopt_array($ch, [
         'Content-Type: application/json',
         'Authorization: Bearer ' . $apiKey
     ],
-    CURLOPT_TIMEOUT => 10,
-    CURLOPT_CONNECTTIMEOUT => 3
+    CURLOPT_TIMEOUT => 30,
+    CURLOPT_CONNECTTIMEOUT => 5
 ]);
 
 $response = curl_exec($ch);

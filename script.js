@@ -37,7 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const cfgApiUrl = document.getElementById('cfg-api-url');
     const cfgModel = document.getElementById('cfg-model');
 
-    // Conversation Memory for Cloud AI
+    // Conversation Memory for Cloud AI & Tunnel Endpoint to Yan's Local Hermes
+    const TUNNEL_CHAT_URL = 'https://romance-restructuring-tables-trips.trycloudflare.com/coba/yan/chat.php';
     let chatHistory = [];
     const HERMES_SYSTEM_PROMPT = `Kamu adalah 'Hermes', asisten AI cerdas sekaligus teman curhat yang dibuat oleh Yan khusus untuk Nada.
 Hubungan Yan dan Nada adalah TEMAN BAIK / SAHABAT (pure friendship / best friends, BUKAN pacar atau romantis).
@@ -389,29 +390,32 @@ Karakter & Tugasmu:
         let botReply = '';
         let replySource = 'cloud_hermes';
 
-        // 3. Try Local PHP endpoint first if running on Laragon/localhost
-        if (isLocalHost) {
-            try {
-                const response = await fetch('chat.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: cleanText,
-                        api_url: storedApiUrl,
-                        model: storedModel
-                    })
-                });
+        // 3. Try Local PHP endpoint (on localhost) OR Cloudflare Tunnel to Yan's Hermes
+        const chatEndpoint = isLocalHost ? 'chat.php' : TUNNEL_CHAT_URL;
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 32000);
+            const response = await fetch(chatEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: cleanText,
+                    api_url: storedApiUrl,
+                    model: storedModel
+                }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
 
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.success && data.reply && data.source === 'local_hermes') {
-                        botReply = data.reply;
-                        replySource = 'local_hermes';
-                    }
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data.success && data.reply && data.source === 'local_hermes') {
+                    botReply = data.reply;
+                    replySource = 'local_hermes';
                 }
-            } catch (err) {
-                console.log('Local PHP fetch failed:', err);
             }
+        } catch (err) {
+            console.log('Hermes tunnel/local fetch unavailable, falling back:', err);
         }
 
         // 4. Use Cloud AI (Pollinations OpenAI-compatible) when on Netlify or if local Hermes isn't active
@@ -606,28 +610,12 @@ Karakter & Tugasmu:
 
             const isNetlify = window.location.hostname.includes('netlify.app') || (!window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1'));
 
-            if (isNetlify) {
-                const testReply = await callCloudHermesAI('tes');
-                if (testReply) {
-                    testConnectionStatus.innerHTML = `
-                        <div style="color:#34d399; font-weight:600; margin-bottom:4px;">
-                            <i class="fa-solid fa-circle-check"></i> Hermes Cloud AI Aktif!
-                        </div>
-                        <div style="color:#bae6fd; font-size:0.78rem;">
-                            Siap bantu tugas, diskusi, dan nemenin Nada curhat 24/7 dari HP maupun laptop.
-                        </div>
-                    `;
-                } else {
-                    testConnectionStatus.innerHTML = '<span style="color:#38bdf8;"><i class="fa-solid fa-shield-heart"></i> Mode Sanctuary Aktif (tetap bisa merespons Nada).</span>';
-                }
-                return;
-            }
-
             const urlVal = cfgApiUrl ? cfgApiUrl.value.trim() : '';
             const modelVal = cfgModel ? cfgModel.value.trim() : '';
+            const testEndpoint = isNetlify ? TUNNEL_CHAT_URL : 'chat.php';
 
             try {
-                const res = await fetch('chat.php', {
+                const res = await fetch(testEndpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -641,12 +629,28 @@ Karakter & Tugasmu:
 
                 const data = await res.json();
                 if (data.source === 'local_hermes') {
-                    testConnectionStatus.innerHTML = `<span style="color:#34d399;"><i class="fa-solid fa-circle-check"></i> Berhasil terhubung ke Local Hermes AI (${data.endpoint || 'Port 8642'})!</span>`;
+                    testConnectionStatus.innerHTML = `<span style="color:#34d399;"><i class="fa-solid fa-circle-check"></i> Berhasil terhubung ke Agent Hermes Yan!</span>`;
                 } else {
-                    testConnectionStatus.innerHTML = `<span style="color:#38bdf8;"><i class="fa-solid fa-circle-info"></i> Endpoint lokal belum terhubung. Sistem memakai Cloud AI Hermes (tetap pintar &amp; aktif).</span>`;
+                    testConnectionStatus.innerHTML = `<span style="color:#38bdf8;"><i class="fa-solid fa-circle-info"></i> Agent Hermes lokal belum aktif. Sistem memakai mode cadangan.</span>`;
                 }
             } catch (err) {
-                testConnectionStatus.innerHTML = `<span style="color:#38bdf8;"><i class="fa-solid fa-shield-heart"></i> Mode Cloud AI Aktif (Chat tetap lancar untuk Nada).</span>`;
+                if (isNetlify) {
+                    const testReply = await callCloudHermesAI('tes');
+                    if (testReply) {
+                        testConnectionStatus.innerHTML = `
+                            <div style="color:#34d399; font-weight:600; margin-bottom:4px;">
+                                <i class="fa-solid fa-circle-check"></i> Hermes Cloud AI Aktif!
+                            </div>
+                            <div style="color:#bae6fd; font-size:0.78rem;">
+                                Tunnel laptop Yan sedang offline, tapi Cloud AI siap nemenin Nada 24/7.
+                            </div>
+                        `;
+                    } else {
+                        testConnectionStatus.innerHTML = '<span style="color:#38bdf8;"><i class="fa-solid fa-shield-heart"></i> Mode Sanctuary Aktif (tetap bisa merespons Nada).</span>';
+                    }
+                } else {
+                    testConnectionStatus.innerHTML = `<span style="color:#38bdf8;"><i class="fa-solid fa-shield-heart"></i> Mode Cloud AI Aktif (Chat tetap lancar untuk Nada).</span>`;
+                }
             }
         });
     }
