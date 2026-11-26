@@ -170,22 +170,106 @@ Karakter & Tugasmu:
     }
 
     // -------------------------------------------------------------------------
-    // 3. OFFLINE SANCTUARY FALLBACK (Jika internet / cloud AI tidak terjangkau)
+    // 3. SMART LOCAL ENGINE (Natural Best-Friend Chat + Math + Anti-Repeat)
     // -------------------------------------------------------------------------
+    let recentFallbackReplies = [];
+
+    function pickUnique(options) {
+        const available = options.filter(opt => !recentFallbackReplies.includes(opt));
+        const pool = available.length > 0 ? available : options;
+        const chosen = pool[Math.floor(Math.random() * pool.length)];
+        recentFallbackReplies.push(chosen);
+        if (recentFallbackReplies.length > 6) recentFallbackReplies.shift();
+        return chosen;
+    }
+
+    function trySolveMath(text) {
+        // Deteksi ekspresi matematika sederhana seperti "12 * 5", "100 / 4 + 5", "(10+5)*2"
+        const cleaned = text.replace(/×/g, '*').replace(/x/gi, '*').replace(/÷/g, '/').replace(/,/g, '.');
+        const match = cleaned.match(/(?:hitung(?:in)?|berapa(?:kah)?|=)?\s*([-+]?\d+(?:\.\d+)?(?:\s*[-+*/^()]\s*\d+(?:\.\d+)?)+)\s*\??/i);
+        if (match && match[1]) {
+            try {
+                const expr = match[1].replace(/\^/g, '**');
+                if (/^[\d\s+\-*/().]+$/.test(expr)) {
+                    const result = Function(`"use strict"; return (${expr})`)();
+                    if (typeof result === 'number' && isFinite(result)) {
+                        return `Hasil dari \`${match[1].trim()}\` itu **${Number.isInteger(result) ? result : result.toFixed(4).replace(/\.?0+$/, '')}** Nad! 🧮 Mau sekalian gua jelasin langkah ngitungnya atau ada soal lain?`;
+                    }
+                }
+            } catch (e) { /* ignore */ }
+        }
+        return null;
+    }
+
     function generateHermesOfflineFallback(userText) {
         const text = userText.toLowerCase().trim();
         const has = (...words) => words.some(w => text.includes(w));
 
+        // Cek kalau ada hitungan matematika
+        const mathAnswer = trySolveMath(userText);
+        if (mathAnswer) return mathAnswer;
+
+        // Reaksi obrolan santai / singkat ("masa sih", "kok gitu", "lah", "wkwk", dll)
+        if (has('masa sih', 'masa?', 'serius', 'beneran', 'bohong', 'ga percaya', 'gak percaya')) {
+            return pickUnique([
+                "Seriusan dong Nad! Emang kenapa, lo lagi ngerasa ada yang aneh ya? Cerita coba 👀",
+                "Haha beneran lah! Tapi bentar, ini maksudnya soal apa dulu nih? Spill dong konteksnya 😄",
+                "Iyaa beneran Nad! Emang barusan kenapa tuh? Ceritain aja santai ✨"
+            ]);
+        }
+        if (has('ga aman', 'gak aman', 'kenapa emang', 'kenapa?', 'kok gitu', 'apaan', 'lah', 'gimana sih')) {
+            return pickUnique([
+                "Haha aman kok Nad, santai aja! Tadi jaringan sempet kedip dikit doang 😅 Sekarang udah normal lagi, lo mau bahas apa nih?",
+                "Aman jaya kok Nad! Yuk lanjut cerita tadi — tadi kan lo bilang ada cerita seru, apaan tuh? 👀",
+                "Eits aman banget kok! Coba ceritain aja pelan-pelan, gua nyimak beneran nih 🕊️"
+            ]);
+        }
+        if (has('wkwk', 'haha', 'hehe', 'hihi', 'ngakak', 'lucu')) {
+            return pickUnique([
+                "Wkwk apaan sih yang bikin ngakak? Bagi-bagi dong ceritanya biar gua ikut ketawa! 😂",
+                "Haha seneng banget liat lo ketawa Nad! Spill dong kejadian lucunya apaan? ✨",
+                "Duh jadi ikutan penasaran nih, emang ada kejadian kocak apa hari ini Nad? 😄"
+            ]);
+        }
         if (has('kangen', 'rindu')) {
-            return "Wajar banget Nad kalau kangen ngobrol bareng Yan! Colek aja si Yan lewat tombol WhatsApp di bawah, dia pasti seneng dapet pesan dari lo ☕";
+            return pickUnique([
+                "Wajar banget Nad kalau kangen ngobrol bareng Yan! Colek aja si Yan lewat tombol WhatsApp di bawah, dia pasti seneng dapet pesan dari lo ☕",
+                "Haha kangen ya Nad? Langsung aja chat WA Yan, jangan dipendem — dia pasti lagi nungguin kabar dari lo juga 😄✨"
+            ]);
         }
-        if (has('capek', 'lelah', 'pusing', 'mumet', 'burnout', 'ngantuk')) {
-            return "Istirahat dulu Nad, beneran. Tarik napas sebentar, minum air putih, dan jangan terlalu keras sama diri sendiri hari ini ya 🌿";
+        if (has('capek', 'lelah', 'pusing', 'mumet', 'burnout', 'ngantuk', 'pegel', 'lemes')) {
+            return pickUnique([
+                "Istirahat dulu Nad, beneran. Tarik napas sebentar, minum air putih, dan jangan terlalu keras sama diri sendiri hari ini ya 🌿",
+                "Duh capek ya Nad? Rebahan bentar gih, matiin notif dulu 15 menit. Lo udah berjuang hebat banget hari ini ✨"
+            ]);
         }
-        if (has('overthinking', 'cemas', 'takut', 'sedih', 'galau', 'down')) {
-            return "Gua dengerin Nad. Apa pun yang lagi bikin pikiran penuh, tumpahin aja di sini. Lo nggak sendirian kok 🕊️";
+        if (has('overthinking', 'cemas', 'takut', 'sedih', 'galau', 'down', 'bingung', 'stress')) {
+            return pickUnique([
+                "Gua dengerin Nad. Apa pun yang lagi bikin pikiran penuh, tumpahin aja di sini. Lo nggak sendirian kok 🕊️",
+                "Pelan-pelan ya Nad. Nggak semua hal harus lo selesain detik ini juga. Tarik napas dulu, kalau butuh temen ngobrol Yan juga selalu ada 💙"
+            ]);
         }
-        return "Gua dengerin kok Nad! Coba ceritain lebih detail atau ketik pertanyaan lo, kalau koneksi aman gua langsung bantu jawab tuntas ✨";
+        if (has('tugas', 'pr', 'skripsi', 'makalah', 'essay', 'coding', 'error', 'matematika', 'bantu', 'tolong', 'jelasin', 'cara')) {
+            return pickUnique([
+                "Siap bantu Nad! Paste aja langsung soal, materi, atau kode error-nya di sini biar gua bisa langsung kerjain/jelasin step-by-step 💪",
+                "Boleh banget! Kasih tau detail tugasnya apa (mapel/matkul, instruksi, atau soalnya), nanti kita beresin bareng ✨",
+                "Gas Nad! Tulis aja pertanyaannya yang lengkap ya, mau soal hitungan, essay, atau coding gua siap bantu 📚"
+            ]);
+        }
+        if (has('halo', 'hai', 'hei', 'hey', 'pagi', 'siang', 'sore', 'malem', 'malam')) {
+            return pickUnique([
+                "Halo Nada! ✨ Gimana hari ini? Lagi pengen cerita santai, curhat, atau butuh bantuan tugas?",
+                "Hai Nad! Seneng lo mampir ke sini. Ada cerita seru apa hari ini? 🕊️"
+            ]);
+        }
+
+        return pickUnique([
+            "Gua nyimak nih Nad! Ceritain aja terusannya gimana, jangan setengah-setengah dong 👀✨",
+            "Ooh gitu... terus habis itu gimana kejadiannya Nad? Penasaran gua!",
+            "Noted Nad! Mau lanjut bahas ini lebih dalam, atau ada hal lain yang lagi lo pikirin sekarang? ☕",
+            "Serius nih? Coba jelasin lebih detail dikit Nad biar gua makin nyambung ngikutin ceritanya 😄",
+            "Gua dengerin kok Nad! Mau curhat santai, nanya sesuatu, atau minta bantuan tugas tinggal ketik aja ya 🕊️"
+        ]);
     }
 
     // -------------------------------------------------------------------------
