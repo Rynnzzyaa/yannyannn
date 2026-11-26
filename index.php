@@ -26,7 +26,7 @@ $config = json_decode(file_get_contents(__DIR__ . '/hermes_config.json'), true) 
     <!-- Canvas Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=3.5">
+    <link rel="stylesheet" href="style.css?v=3.6">
 </head>
 <body>
     <!-- Ambient Background Lighting -->
@@ -157,13 +157,13 @@ $config = json_decode(file_get_contents(__DIR__ . '/hermes_config.json'), true) 
                 <!-- Polaroid Photo of Yan -->
                 <div class="corner-card glass-panel polaroid-card-box">
                     <div class="washi-tape">📌 Dari Yan</div>
-                    <div class="polaroid-img-wrapper" id="polaroid-toggle" title="Ketuk buat ganti foto Yan!">
-                        <img src="images/yan-1.jpg" alt="Foto Yan" id="yan-photo" class="polaroid-photo">
-                        <span class="photo-index" id="photo-index">1 / 3 📸</span>
+                    <div class="polaroid-img-wrapper" id="polaroid-toggle" title="Ketuk buat kasih efek seru!">
+                        <img src="images/yan-3.jpg" alt="Foto Yan" id="yan-photo" class="polaroid-photo">
+                        <span class="photo-index" id="photo-index">📸</span>
                     </div>
                     <div class="polaroid-caption">
-                        <p id="polaroid-quote">"Tetap semangat ya Nad! Jangan lupa istirahat ✨"</p>
-                        <small>(Ketuk fotonya buat ganti foto Yan!)</small>
+                        <p id="polaroid-quote">"Teman cerita terbaik: Nada &amp; Yan 🤜🤛"</p>
+                        <small>Always got your back! ✨</small>
                     </div>
                 </div>
 
@@ -280,6 +280,6 @@ $config = json_decode(file_get_contents(__DIR__ . '/hermes_config.json'), true) 
     </div>
 
     <!-- Scripts -->
-    <script src="script.js?v=3.5"></script>
+    <script src="script.js?v=3.6"></script>
 </body>
 </html>
