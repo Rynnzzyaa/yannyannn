@@ -82,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Conversation Memory for Cloud AI & Tunnel Endpoint to Yan's Local Hermes
     const TUNNEL_CHAT_URL = 'https://romance-restructuring-tables-trips.trycloudflare.com/coba/yan/chat.php';
+    const STORAGE_CHAT_KEY = 'yan_nada_chat_ui_v1';
     let chatHistory = [];
     const HERMES_SYSTEM_PROMPT = `Kamu adalah 'Hermes', asisten AI cerdas sekaligus teman curhat yang dibuat oleh Yan khusus untuk Nada.
 Hubungan Yan dan Nada adalah TEMAN BAIK / SAHABAT (pure friendship / best friends, BUKAN pacar atau romantis).
@@ -340,10 +341,10 @@ Karakter & Tugasmu:
         return safe;
     }
 
-    function appendMessage(sender, text, isUser = false, forwardable = false) {
+    function appendMessage(sender, text, isUser = false, forwardable = false, customTime = null, skipSave = false) {
         if (!chatMessages) return;
 
-        const timeNow = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        const timeNow = customTime || new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         const msgDiv = document.createElement('div');
         msgDiv.className = `message-item ${isUser ? 'user-message' : 'bot-message'}`;
 
@@ -375,7 +376,30 @@ Karakter & Tugasmu:
 
         chatMessages.appendChild(msgDiv);
         scrollToBottom();
+
+        if (!skipSave) {
+            try {
+                const saved = JSON.parse(localStorage.getItem(STORAGE_CHAT_KEY) || '[]');
+                saved.push({ sender, text, isUser, forwardable, time: timeNow });
+                if (saved.length > 60) saved.splice(0, saved.length - 60);
+                localStorage.setItem(STORAGE_CHAT_KEY, JSON.stringify(saved));
+            } catch (e) { /* ignore storage quota */ }
+        }
     }
+
+    // Restore chat history from localStorage on load
+    (function restoreSavedChat() {
+        try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_CHAT_KEY) || '[]');
+            if (Array.isArray(saved) && saved.length > 0) {
+                saved.forEach(item => {
+                    appendMessage(item.sender, item.text, item.isUser, item.forwardable, item.time, true);
+                    chatHistory.push({ role: item.isUser ? 'user' : 'assistant', content: item.text });
+                });
+                if (chatHistory.length > 14) chatHistory = chatHistory.slice(-14);
+            }
+        } catch (e) { /* ignore */ }
+    })();
 
     async function callCloudHermesAI(cleanText) {
         const controller = new AbortController();
@@ -443,6 +467,7 @@ Karakter & Tugasmu:
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: cleanText,
+                    history: chatHistory.slice(-12),
                     api_url: storedApiUrl,
                     model: storedModel
                 }),
@@ -523,6 +548,7 @@ Karakter & Tugasmu:
         btnClearChat.addEventListener('click', () => {
             if (confirm('Bersihkan percakapan ini dan mulai obrolan baru?')) {
                 chatHistory = [];
+                localStorage.removeItem(STORAGE_CHAT_KEY);
                 chatMessages.innerHTML = `
                     <div class="message-item bot-message">
                         <div class="msg-avatar"><i class="fa-solid fa-dove"></i></div>

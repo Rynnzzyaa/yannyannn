@@ -41,11 +41,23 @@ if (!isset($_SESSION['chat_history'])) {
     $_SESSION['chat_history'] = [];
 }
 
-// Save user message in session
-$_SESSION['chat_history'][] = ['role' => 'user', 'content' => $userMessage];
-
-if (count($_SESSION['chat_history']) > 12) {
-    $_SESSION['chat_history'] = array_slice($_SESSION['chat_history'], -12);
+// Gunakan history dari frontend jika dikirim (penting untuk akses lintas-origin via Netlify/Tunnel)
+if (!empty($input['history']) && is_array($input['history'])) {
+    $historyToSend = [];
+    foreach (array_slice($input['history'], -12) as $h) {
+        if (!empty($h['role']) && isset($h['content'])) {
+            $historyToSend[] = [
+                'role' => $h['role'] === 'assistant' ? 'assistant' : 'user',
+                'content' => (string)$h['content']
+            ];
+        }
+    }
+    $_SESSION['chat_history'] = $historyToSend;
+} else {
+    $_SESSION['chat_history'][] = ['role' => 'user', 'content' => $userMessage];
+    if (count($_SESSION['chat_history']) > 12) {
+        $_SESSION['chat_history'] = array_slice($_SESSION['chat_history'], -12);
+    }
 }
 
 $systemPrompt = "Kamu adalah 'Hermes', agen AI teman curhat dan sahabat baik yang dibuat oleh {$config['yan_name']} khusus untuk {$config['nada_name']}.
