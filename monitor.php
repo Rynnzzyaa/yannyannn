@@ -1,5 +1,35 @@
 <?php
 $logFile = __DIR__ . '/nada_chat_logs.json';
+$configFile = __DIR__ . '/hermes_config.json';
+$config = file_exists($configFile) ? (json_decode(file_get_contents($configFile), true) ?: []) : [];
+$apiUrl = $config['api_url'] ?? 'http://127.0.0.1:8642/v1/chat/completions';
+$apiKey = $config['api_key'] ?? '';
+$modelName = $config['model'] ?? 'hermes-agent';
+
+// AJAX endpoint untuk tes koneksi Agent Hermes tanpa mengotori log Nada
+if (isset($_GET['test_conn'])) {
+    header('Content-Type: application/json; charset=utf-8');
+    $modelsUrl = preg_replace('#/v1/chat/completions$#', '/v1/models', $apiUrl);
+    $ch = curl_init($modelsUrl);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $apiKey],
+        CURLOPT_TIMEOUT => 5,
+        CURLOPT_CONNECTTIMEOUT => 3
+    ]);
+    $res = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    if ($code === 200) {
+        echo json_encode(['ok' => true, 'message' => "Terhubung ke Local Agent Hermes ($apiUrl)", 'http' => $code]);
+    } else {
+        echo json_encode(['ok' => false, 'message' => "Belum merespon (HTTP $code" . ($err ? " - $err" : "") . "). Pastikan aplikasi Hermes Agent nyala."]);
+    }
+    exit;
+}
+
 $logs = [];
 
 if (file_exists($logFile)) {
@@ -177,6 +207,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             margin-bottom: 1rem;
             opacity: 0.5;
         }
+        .server-panel {
+            background: rgba(16, 22, 36, 0.9);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 16px;
+            padding: 1.15rem 1.35rem;
+            margin-bottom: 1.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .server-info h3 {
+            font-size: 0.95rem;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+        .server-info small {
+            color: #94a3b8;
+            font-size: 0.78rem;
+            display: block;
+        }
+        .server-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .btn-test {
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            color: #ffffff;
+        }
+        .btn-test:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        .conn-status {
+            font-size: 0.82rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.05);
+            color: #cbd5e1;
+        }
     </style>
 </head>
 <body>
@@ -196,6 +272,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     <button type="submit" class="btn btn-clear"><i class="fa-solid fa-trash"></i> Bersihkan</button>
                 </form>
                 <?php endif; ?>
+            </div>
+        </div>
+
+        <!-- Panel Tes Koneksi Server Hermes (Khusus Yan) -->
+        <div class="server-panel">
+            <div class="server-info">
+                <h3><i class="fa-solid fa-server" style="color:#38bdf8;"></i> Status Server Agent Hermes</h3>
+                <small>Endpoint: <code><?= htmlspecialchars($apiUrl) ?></code> • Model: <code><?= htmlspecialchars($modelName) ?></code></small>
+            </div>
+            <div class="server-actions">
+                <div id="conn-status" class="conn-status">Klik tombol untuk cek koneksi</div>
+                <button type="button" id="btn-test-server" class="btn btn-test">
+                    <i class="fa-solid fa-plug-circle-check"></i> Tes Koneksi Server
+                </button>
             </div>
         </div>
 
@@ -234,6 +324,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     </div>
 
     <script>
+        const btnTestServer = document.getElementById('btn-test-server');
+        const connStatus = document.getElementById('conn-status');
+
+        if (btnTestServer) {
+            btnTestServer.addEventListener('click', async () => {
+                connStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengecek server Hermes...';
+                connStatus.style.color = '#bae6fd';
+                try {
+                    const res = await fetch('monitor.php?test_conn=1');
+                    const data = await res.json();
+                    if (data.ok) {
+                        connStatus.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#34d399;"></i> ${data.message}`;
+                        connStatus.style.color = '#34d399';
+                    } else {
+                        connStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:#f87171;"></i> ${data.message}`;
+                        connStatus.style.color = '#fca5a5';
+                    }
+                } catch (e) {
+                    connStatus.innerHTML = `<i class="fa-solid fa-circle-xmark" style="color:#f87171;"></i> Gagal cek koneksi: ${e.message}`;
+                    connStatus.style.color = '#fca5a5';
+                }
+            });
+        }
+
         // Auto refresh every 10 seconds so Yan sees incoming chats live
         setInterval(() => {
             location.reload();
