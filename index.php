@@ -26,9 +26,31 @@ $config = json_decode(file_get_contents(__DIR__ . '/hermes_config.json'), true) 
     <!-- Canvas Confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=3.6">
+    <link rel="stylesheet" href="style.css?v=3.7">
 </head>
 <body>
+    <!-- Verification Gate (Birthday Check) -->
+    <div id="auth-gate" class="auth-gate-overlay">
+        <div class="auth-gate-card glass-panel">
+            <div class="auth-gate-icon">
+                <i class="fa-solid fa-cake-candles"></i>
+            </div>
+            <h2 class="auth-gate-title">Sebentar ya, <?= htmlspecialchars($config['nada_name']) ?>! 🔐</h2>
+            <p class="auth-gate-desc">Biar cuma kamu yang bisa masuk ke ruang cerita ini, tebak dulu pertanyaan singkat berikut:</p>
+            <div class="auth-question-box">
+                <span>Tanggal &amp; bulan berapa <strong><?= htmlspecialchars($config['yan_name']) ?></strong> lahir? 🎂</span>
+            </div>
+            <form id="auth-gate-form" class="auth-gate-form">
+                <input type="text" id="auth-answer" class="auth-input" placeholder="Ketik jawaban, misal: 12 Mei" autocomplete="off" required>
+                <div id="auth-error" class="auth-error hidden"></div>
+                <button type="submit" class="auth-btn">
+                    <span>Masuk ke Ruang Cerita</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Ambient Background Lighting -->
     <div class="bg-glow bg-glow-1"></div>
     <div class="bg-glow bg-glow-2"></div>
@@ -46,9 +68,6 @@ $config = json_decode(file_get_contents(__DIR__ . '/hermes_config.json'), true) 
             <div class="header-actions">
                 <button id="btn-ambient-sound" class="btn-icon" title="Suasana Hujan &amp; Musik Tenang">
                     <i class="fa-solid fa-cloud-rain"></i>
-                </button>
-                <button id="btn-open-settings" class="btn-icon" title="Pengaturan Endpoint Hermes">
-                    <i class="fa-solid fa-sliders"></i>
                 </button>
                 <div class="receiver-pill">
                     Safe Space: <strong><?= htmlspecialchars($config['nada_name']) ?></strong> ✨
@@ -280,6 +299,6 @@ $config = json_decode(file_get_contents(__DIR__ . '/hermes_config.json'), true) 
     </div>
 
     <!-- Scripts -->
-    <script src="script.js?v=3.6"></script>
+    <script src="script.js?v=3.7"></script>
 </body>
 </html>

@@ -7,6 +7,49 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // -------------------------------------------------------------------------
+    // 0. VERIFICATION GATE (31 Oktober)
+    // -------------------------------------------------------------------------
+    const authGate = document.getElementById('auth-gate');
+    const authGateForm = document.getElementById('auth-gate-form');
+    const authAnswer = document.getElementById('auth-answer');
+    const authError = document.getElementById('auth-error');
+
+    if (authGate) {
+        if (localStorage.getItem('yan_nada_verified_1031') === 'true') {
+            authGate.classList.add('unlocked');
+        }
+
+        if (authGateForm && authAnswer) {
+            authGateForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const raw = authAnswer.value.trim().toLowerCase();
+                const isValid = /^31[\s\/\-\.]*(oktober|okt|october|oct|10)$/.test(raw);
+
+                if (isValid) {
+                    localStorage.setItem('yan_nada_verified_1031', 'true');
+                    if (authError) authError.classList.add('hidden');
+                    playTone('boost');
+                    if (typeof confetti === 'function') {
+                        confetti({ particleCount: 55, spread: 70, origin: { y: 0.6 } });
+                    }
+                    authGate.classList.add('unlocked');
+                } else {
+                    const card = authGate.querySelector('.auth-gate-card');
+                    if (card) {
+                        card.classList.remove('shake');
+                        void card.offsetWidth;
+                        card.classList.add('shake');
+                    }
+                    if (authError) {
+                        authError.textContent = 'Eits, masa lupa tanggal lahir Yan sih? Coba inget-inget lagi Nad! 😜';
+                        authError.classList.remove('hidden');
+                    }
+                }
+            });
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // 1. DOM ELEMENTS
     // -------------------------------------------------------------------------
     const chatForm = document.getElementById('chat-form');
